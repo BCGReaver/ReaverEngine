@@ -1,35 +1,36 @@
 #pragma once
-#include "Prerequisites.h"
+#include <Prerequisites.h>
+#include "Window.h"
 
-class BaseApp{
-
+class
+	BaseApp {
 public:
 	BaseApp() = default;
 	~BaseApp();
 
-    // Funcion encargada de ejecutar la aplicación en main
-	int 
-	run();
+	//Función encargada de ejecutar la aplicación en main
+	int
+		run();
 
-	// Funcion inicializadora
-	bool 
-	init();
+	//Función de inicialización
+	bool
+		init();
 
-	// Funcion que se acytualiza por frame
-	void 
-	update();
+	//Función que se actualiza por frame
+	void
+		update();
 
-	// Funcion renderizado
-	void 
-	render();
+	//Función de renderizado
+	void
+		render();
 
-	void 
-	destroy();
+	void
+		destroy();
 
-	void 
-	handleEvents();
-
-private: 
-	sf::RenderWindow* m_window;
-	sf::CircleShape*  m_circle;
+private:
+	//Son punteros globales para poder gestionar los recursos que utilizan
+	//Inician con m_ porque son miembros de una clase. Si estuvieran en main de forma global serían g_
+	//sf::RenderWindow* m_window; -> Se creo una clase a parte para no depender de SFMLN
+	Window* m_window;
+	sf::CircleShape* m_circle;
 };
