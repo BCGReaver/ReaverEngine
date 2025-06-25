@@ -13,6 +13,12 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Memory">
+      <UniqueIdentifier>{dc2f5b21-ca58-40b6-afc6-2c3667b916ba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ECS">
+      <UniqueIdentifier>{f3792c05-a196-4a3e-8def-32362314f305}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\BaseApp.cpp">
@@ -25,6 +31,9 @@
       <Filter>Archivos de origen</Filter>
     </ClCompile>
     <ClCompile Include="src\Window.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
+    <ClCompile Include="include\ECS\Transform.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
   </ItemGroup>
@@ -40,6 +49,30 @@
     </ClInclude>
     <ClInclude Include="include\Window.h">
       <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Memory\TSharedPointer.h">
+      <Filter>Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Memory\TStaticPtr.h">
+      <Filter>Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Memory\TUniquePtr.h">
+      <Filter>Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Memory\TWeakPointer.h">
+      <Filter>Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\Actor.h">
+      <Filter>ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\Component.h">
+      <Filter>ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\Entity.h">
+      <Filter>ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\Transform.h">
+      <Filter>ECS</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

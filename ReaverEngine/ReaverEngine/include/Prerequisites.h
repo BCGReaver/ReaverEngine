@@ -12,6 +12,10 @@
 
 //Third Parties
 #include <SFML/Graphics.hpp>
+#include <Memory/TSharedPointer.h>
+#include <Memory/TStaticPtr.h>  
+#include <Memory/TUniquePtr.h>
+#include <Memory/TWeakPointer.h>
 
 //Imgui - Interfaz de usuario
 
