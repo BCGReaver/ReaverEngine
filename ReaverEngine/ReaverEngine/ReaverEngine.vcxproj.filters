@@ -19,6 +19,15 @@
     <Filter Include="ECS">
       <UniqueIdentifier>{f3792c05-a196-4a3e-8def-32362314f305}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Utilities">
+      <UniqueIdentifier>{54a6e39e-2201-40bb-9c39-d207a0915c9b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Archivos de origen\ECS">
+      <UniqueIdentifier>{c2264415-493c-413c-81e5-fb716af24b83}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Archivos de origen\Utilities">
+      <UniqueIdentifier>{2579376d-a29e-4e39-90fb-bf99aac54cd4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\BaseApp.cpp">
@@ -33,8 +42,11 @@
     <ClCompile Include="src\Window.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
-    <ClCompile Include="include\ECS\Transform.cpp">
-      <Filter>Archivos de origen</Filter>
+    <ClCompile Include="src\ECS\Actor.cpp">
+      <Filter>Archivos de origen\ECS</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Utilities\CVector2.cpp">
+      <Filter>Archivos de origen\Utilities</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -70,6 +82,9 @@
     </ClInclude>
     <ClInclude Include="include\ECS\Entity.h">
       <Filter>ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Utilities\CVector2.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="include\ECS\Transform.h">
       <Filter>ECS</Filter>
