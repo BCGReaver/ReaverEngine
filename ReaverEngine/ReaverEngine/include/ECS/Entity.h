@@ -1,92 +1,104 @@
+/**
+ * @file Entity.h
+ * @brief Define la clase base `Entity` para todos los objetos que poseen componentes en el motor.
+ *
+ * @details
+ * La clase `Entity` es una interfaz abstracta que:
+ * - Obliga a implementar los métodos de ciclo de vida (`start`, `update`, `render`, `destroy`).
+ * - Permite agregar y obtener componentes de forma genérica mediante `TSharedPointer`.
+ * - Mantiene una lista interna de componentes asociados.
+ */
+
 #pragma once
 #include "../Prerequisites.h"
+#include "Component.h"
 
+class Window;
 
-#include <vector>
-#include <string>
-#include <type_traits> // Para std::is_base_of
-#include <memory/TSharedPointer.h> // Asegúrate de que esta ruta sea correcta a tu TSharedPointer
-
-// Asumiendo que Component.h define la clase Component base
-#include "ECS/Component.h" // Ajusta la ruta si es diferente
-
-// Otras inclusiones necesarias para tus componentes si Entity las usa directamente
-// #include "Transform.h" // Si Entity necesita conocer Transform
-// #include "CShape.h"    // Si Entity necesita conocer CShape
-
+/**
+ * @class Entity
+ * @brief Clase base abstracta para todos los objetos del motor que pueden tener componentes.
+ *
+ * @details
+ * - Define la interfaz para inicializar, actualizar, renderizar y destruir.
+ * - Gestiona un contenedor de componentes (`Component`) que extienden la funcionalidad de la entidad.
+ * - Provee métodos genéricos para agregar y obtener componentes.
+ *
+ * @note Se utiliza `EngineUtilities::TSharedPointer` para la gestión de memoria inteligente.
+ */
 class Entity {
 public:
-  // Constructor
-  Entity() = default; // O tu constructor si tiene lógica específica
-
-  // Destructor
+  /**
+   * @brief Destructor virtual por defecto.
+   *
+   * Esto garantiza que la destrucción sea correcta incluso al usar punteros a la clase base.
+   */
   virtual ~Entity() = default;
 
   /**
-   * @brief Añade un componente a la entidad.
-   * @tparam T Tipo del componente a añadir (debe derivar de Component).
-   * @param component El TSharedPointer al componente a añadir.
+   * @brief Inicializa la entidad y sus componentes.
+   * @return `true` si la inicialización fue exitosa, `false` en caso contrario.
+   *
+   * @note Este método debe ser implementado por las clases derivadas.
+   */
+  virtual void start() = 0;
+
+  /**
+   * @brief Actualiza la lógica de la entidad.
+   * @param deltaTime Tiempo transcurrido desde el último frame.
+   *
+   * @note Debe ser implementado por las clases derivadas.
+   */
+  virtual void update(float deltaTime) = 0;
+
+  /**
+   * @brief Renderiza la entidad.
+   * @param window Puntero compartido a la ventana donde se dibujará.
+   *
+   * @note Debe ser implementado por las clases derivadas.
+   */
+  virtual void render(const EngineUtilities::TSharedPointer<Window>& window) = 0;
+
+  /**
+   * @brief Libera recursos asociados a la entidad.
+   *
+   * @note Debe ser implementado por las clases derivadas.
+   */
+  virtual void destroy() = 0;
+
+  /**
+   * @brief Agrega un componente a la entidad.
+   * @tparam T Tipo del componente. Debe derivar de `Component`.
+   * @param component Puntero compartido al componente a agregar.
+   *
+   * @warning Si `component` no es del tipo correcto, no será agregado.
    */
   template<typename T>
   void addComponent(EngineUtilities::TSharedPointer<T> component) {
     static_assert(std::is_base_of<Component, T>::value, "T must be derived from Component");
-    components.push_back(component.static_pointer_cast<Component>()); // Siempre almacenar como TSharedPointer<Component>
+    components.push_back(component.template dynamic_pointer_cast<Component>());
   }
 
   /**
-   * @brief Obtiene un componente de la entidad por su tipo.
-   * @tparam T Tipo del componente a obtener (debe derivar de Component).
-   * @return Un TSharedPointer al componente si se encuentra, o un TSharedPointer nulo.
+   * @brief Obtiene un componente del tipo especificado.
+   * @tparam T Tipo del componente a obtener.
+   * @return `TSharedPointer` al componente, o un puntero vacío si no existe.
+   *
+   * @note Busca de forma secuencial en la lista de componentes.
    */
   template<typename T>
-  EngineUtilities::TSharedPointer<T>
-    getComponent() {
-    static_assert(std::is_base_of<Component, T>::value, "T must be derived from Component");
-
-    for (const auto& component : components) { // Usa const auto& para eficiencia
-      // Usa dynamic_pointer_cast del TSharedPointer para realizar el cast seguro
-      EngineUtilities::TSharedPointer<T> specificComponent = component.dynamic_pointer_cast<T>();
+  EngineUtilities::TSharedPointer<T> getComponent() {
+    for (auto& component : components) {
+      EngineUtilities::TSharedPointer<T> specificComponent = component.template dynamic_pointer_cast<T>();
       if (specificComponent) {
         return specificComponent;
       }
     }
-    return EngineUtilities::TSharedPointer<T>(); // Retorna un puntero compartido nulo si no se encuentra
+    return EngineUtilities::TSharedPointer<T>();
   }
 
-  /**
-   * @brief Inicia la entidad y sus componentes.
-   * @param deltaTime El tiempo transcurrido desde el último frame.
-   */
-  virtual void start(float deltaTime) {}
-
-  /**
-   * @brief Actualiza la lógica de la entidad y sus componentes.
-   * @param deltaTime El tiempo transcurrido desde el último frame.
-   */
-  virtual void update(float deltaTime) {}
-
-  /**
-   * @brief Renderiza la entidad y sus componentes.
-   * @param window El puntero compartido a la ventana de renderizado.
-   */
-  virtual void render(const EngineUtilities::TSharedPointer<class Window>& window) {}
-
-
-  /**
-   * @brief Devuelve el nombre de la entidad.
-   * @return El nombre de la entidad.
-   */
-  const std::string& getName() const { return m_name; }
-
-  /**
-   * @brief Establece el nombre de la entidad.
-   * @param name El nuevo nombre de la entidad.
-   */
-  void setName(const std::string& name) { m_name = name; }
-
-
 protected:
-  std::string m_name;
-  // Aquí es donde Entity almacena todos sus componentes
-  std::vector<EngineUtilities::TSharedPointer<Component>> components;
+  bool isActive = true;  ///< Indica si la entidad está activa en el juego.
+  uint32_t id = 0;       ///< Identificador único de la entidad.
+  std::vector<EngineUtilities::TSharedPointer<Component>> components; ///< Lista de componentes de la entidad.
 };

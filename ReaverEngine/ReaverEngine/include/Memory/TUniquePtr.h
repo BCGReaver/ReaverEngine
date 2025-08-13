@@ -103,6 +103,12 @@ namespace EngineUtilities {
     TUniquePtr(const TUniquePtr<T>&) = delete;
     TUniquePtr<T>& operator=(const TUniquePtr<T>&) = delete;
 
+    template<typename U>
+    TUniquePtr(TUniquePtr<U>&& other) noexcept
+      : ptr(static_cast<T*>(other.release())) {
+    }
+
+
     /**
      * @brief Operador de desreferenciación.
      *
@@ -178,6 +184,8 @@ namespace EngineUtilities {
     return TUniquePtr<T>(new T(args...));
   }
 
+
+
   /*
   // Ejemplo de uso de TUniquePtr
   class MyClass
@@ -193,7 +201,7 @@ namespace EngineUtilities {
       std::cout << "MyClass destructor: " << value << std::endl;
     }
 
-    
+
     void display() const
     {
       std::cout << "Value: " << value << std::endl;

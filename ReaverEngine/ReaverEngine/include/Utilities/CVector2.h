@@ -1,135 +1,182 @@
-#pragma once 
-#include <cmath>   
-#include <cstddef> 
-#include <iostream> 
-
 /**
- * @class CVector2
- * @brief Implementación de un vector 2D para operaciones geométricas y aritméticas.
+ * @file CVector2.h
+ * @brief Declaración de la clase CVector2 para operaciones con vectores 2D.
  *
- * Esta clase proporciona funcionalidades básicas para el manejo de vectores
- * en un espacio bidimensional, incluyendo constructores, operadores aritméticos,
- * comparaciones, acceso por índice y funciones geométricas.
+ * @details
+ * CVector2 es una clase utilitaria para el manejo y operaciones matemáticas con vectores en 2D.
+ * Proporciona:
+ * - Constructores y operadores sobrecargados para operaciones vectoriales comunes.
+ * - Métodos geométricos como magnitud, normalización, producto punto y producto cruz.
+ * - Funciones estáticas para operaciones como distancia e interpolación lineal.
  */
-class
-  CVector2 {
+
+#pragma once
+#include "../Prerequisites.h"
+
+ /**
+  * @class CVector2
+  * @brief Representa un vector 2D con componentes en punto flotante.
+  */
+class CVector2 {
 public:
-  // Miembros públicos del vector
-  float x; ///< Componente X del vector.
-  float y; ///< Componente Y del vector.
+  /// Componente X del vector.
+  float x;
+  /// Componente Y del vector.
+  float y;
 
-  // Constructores 
-  /**
-   * @brief Constructor por defecto. Inicializa el vector a (0,0).
-   */
-  CVector2() : x(0.0f), y(0.0f) {}
-
-  /**
-   * @brief Constructor con componentes específicos.
-   * @param initialX Valor inicial para el componente X.
-   * @param initialY Valor inicial para el componente Y.
-   */
-  CVector2(float initialX, float initialY) : x(initialX), y(initialY) {}
+  // ==========================
+  // Constructores
+  // ==========================
 
   /**
-   * @brief Constructor de copia.
-   * @param other Otro vector CVector2 para copiar.
+   * @brief Constructor por defecto. Inicializa el vector en (0,0).
    */
-  CVector2(const CVector2& other) : x(other.x), y(other.y) {}
+  CVector2();
 
-  // Operadores Aritméticos
-  CVector2
-    operator+(const CVector2& other) const;
+  /**
+   * @brief Constructor con valores iniciales.
+   * @param x_ Valor de la componente X.
+   * @param y_ Valor de la componente Y.
+   */
+  CVector2(float x_, float y_);
 
-  CVector2
-    operator-(const CVector2& other) const;
+  // ==========================
+  // Operadores aritméticos
+  // ==========================
 
-  CVector2
-    operator*(float scalar) const;
+  /**
+   * @brief Suma de vectores.
+   */
+  CVector2 operator+(const CVector2& v) const;
 
-  CVector2
-    operator/(float scalar) const;
+  /**
+   * @brief Resta de vectores.
+   */
+  CVector2 operator-(const CVector2& v) const;
 
-  CVector2&
-    operator+=(const CVector2& other);
+  /**
+   * @brief Multiplicación por un escalar.
+   */
+  CVector2 operator*(float s) const;
 
-  CVector2&
-    operator-=(const CVector2& other);
+  /**
+   * @brief División por un escalar.
+   */
+  CVector2 operator/(float s) const;
 
-  CVector2&
-    operator*=(float scalar);
+  /**
+   * @brief Suma-igual con otro vector.
+   */
+  CVector2& operator+=(const CVector2& v);
 
-  CVector2&
-    operator/=(float scalar);
+  /**
+   * @brief Resta-igual con otro vector.
+   */
+  CVector2& operator-=(const CVector2& v);
 
-  //  Comparaciones 
-  bool
-    operator==(const CVector2& other) const;
+  /**
+   * @brief Multiplicación-igual por escalar.
+   */
+  CVector2& operator*=(float s);
 
-  bool
-    operator!=(const CVector2& other) const;
+  /**
+   * @brief División-igual por escalar.
+   */
+  CVector2& operator/=(float s);
 
-  //Acceso por Índice 
-  float&
-    operator[](std::size_t index);
+  // ==========================
+  // Comparaciones
+  // ==========================
 
-  const float&
-    operator[](std::size_t index) const;
+  /**
+   * @brief Compara si dos vectores son iguales.
+   */
+  bool operator==(const CVector2& v) const;
 
-  // Funciones Geométricas 
-  float
-    lengthSquared() const;
+  /**
+   * @brief Compara si dos vectores son diferentes.
+   */
+  bool operator!=(const CVector2& v) const;
 
-  float
-    length() const;
+  // ==========================
+  // Acceso por índice
+  // ==========================
 
-  float
-    dot(const CVector2& other) const;
+  /**
+   * @brief Accede a una componente por índice (0 = x, 1 = y).
+   */
+  float& operator[](std::size_t i);
 
-  float
-    cross(const CVector2& other) const;
+  /**
+   * @brief Accede a una componente por índice (0 = x, 1 = y) (const).
+   */
+  const float& operator[](std::size_t i) const;
 
-  CVector2
-    normalized() const;
+  // ==========================
+  // Funciones geométricas
+  // ==========================
 
-  void
-    normalize();
+  /**
+   * @brief Devuelve la longitud (magnitud) del vector.
+   */
+  float length() const;
 
-  // Métodos Estáticos de Utilidad 
-  static float
-    distance(const CVector2& pointA, const CVector2& pointB);
+  /**
+   * @brief Devuelve la longitud al cuadrado del vector (evita sqrt).
+   */
+  float lengthSquared() const;
 
-  static CVector2
-    lerp(const CVector2& vectorA, const CVector2& vectorB, float t);
+  /**
+   * @brief Calcula el producto punto con otro vector.
+   */
+  float dot(const CVector2& v) const;
 
-  static CVector2
-    zero();
+  /**
+   * @brief Calcula el producto cruz en 2D (retorna un escalar).
+   */
+  float cross(const CVector2& v) const;
 
-  static CVector2
-    one();
+  /**
+   * @brief Retorna una copia del vector normalizado.
+   */
+  CVector2 normalized() const;
 
-  //  Métodos para Depuración y Utilidad de Posicionamiento (Uso conceptual) 
-  void
-    setPosition(const CVector2& position);
+  /**
+   * @brief Normaliza el vector en el lugar.
+   */
+  void normalize();
 
-  void
-    move(const CVector2& offset);
+  // ==========================
+  // Métodos estáticos
+  // ==========================
 
-  void
-    setScale(const CVector2& factors);
+  /**
+   * @brief Calcula la distancia entre dos vectores.
+   */
+  static float distance(const CVector2& a, const CVector2& b);
 
-  void
-    scale(const CVector2& factors);
+  /**
+   * @brief Interpolación lineal entre dos vectores.
+   * @param t Factor de interpolación (0 = a, 1 = b).
+   */
+  static CVector2 lerp(const CVector2& a, const CVector2& b, float t);
 
-  void
-    setOrigin(const CVector2& origin);
+  /**
+   * @brief Devuelve un vector (0,0).
+   */
+  static CVector2 zero();
+
+  /**
+   * @brief Devuelve un vector (1,1).
+   */
+  static CVector2 one();
+
+  // ==========================
+  // Depuración
+  // ==========================
+
+  /**
+   * @brief Sobrecarga del operador << para impresión en streams.
+   */
+  friend std::ostream& operator<<(std::ostream& os, const CVector2& v);
 };
-
-//Sobrecarga global del operador de multiplicación por escalar
-// Permite que el escalar vaya primero (ej. 5.0f * myVector)
-CVector2
-operator*(float scalar, const CVector2& vector);
-
-//Sobrecarga global para depuración (operator<<) 
-std::ostream&
-operator<<(std::ostream& os, const CVector2& v);

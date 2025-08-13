@@ -1,44 +1,88 @@
+/**
+ * @file Transform.h
+ * @brief Declara la clase Transform para manejar posición, rotación y escala de entidades.
+ *
+ * @details
+ * El componente Transform es esencial para representar la posición,
+ * orientación y tamaño de un Actor dentro del motor.
+ * También implementa un método `seek` para movimiento hacia un objetivo.
+ */
+
 #pragma once
 #include "Prerequisites.h"
 #include "Component.h"
 #include "Window.h"
 
-class 
-Transform : public Component {
+ /**
+  * @class Transform
+  * @brief Componente encargado de almacenar y manipular transformaciones 2D.
+  *
+  * @details
+  * Este componente:
+  * - Almacena la posición, rotación y escala como `sf::Vector2f`.
+  * - Permite el acceso y modificación directa de estos valores.
+  * - Incluye utilidades para interpolar la posición hacia un objetivo (`seek`).
+  */
+class Transform : public Component {
 public:
-	Transform() : position(0.0f, 0.0f), 
-                rotation(0.0f, 0.0f), 
-                scale(1.0f, 1.0f), 
-                Component(ComponentType::TRANSFORM) {}
-
-	virtual 
-	~Transform() = default;
-
-  void
-	start() override {}
-
-	/**
-   * @brief Actualiza el componente de malla.
-   * @param deltaTime El tiempo transcurrido desde la última actualización.
-   */
-  void 
-  update(float deltaTime) override{}
 
   /**
-   * @brief Renderiza el componente de malla.
-   * @param deviceContext Contexto del dispositivo para operaciones gráficas.
+   * @brief Constructor por defecto.
+   *
+   * Inicializa:
+   * - Posición en (0, 0)
+   * - Rotación en (0, 0)
+   * - Escala en (1, 1)
+   * y asigna el tipo de componente a `TRANSFORM`.
    */
-  void 
-  render(const EngineUtilities::TSharedPointer<Window>& window) override {}
+  Transform()
+    : position(0.0f, 0.0f),
+    rotation(0.0f, 0.0f),
+    scale(1.0f, 1.0f),
+    Component(ComponentType::TRANSFORM) {
+  }
 
-  void
-  destroy() {}
+  /**
+   * @brief Destructor por defecto.
+   */
+  virtual ~Transform() = default;
 
-  void
-  Seek(const sf::Vector2f& targetPosition,
-       float speed,
-       float deltaTime,
-       float range) {
+  /**
+   * @brief Método de inicio del componente (no utilizado en esta clase).
+   */
+  void start() override {}
+
+  /**
+   * @brief Actualización por frame (no utilizada en esta clase).
+   * @param deltaTime Tiempo transcurrido desde el último frame.
+   */
+  void update(float deltaTime) override {}
+
+  /**
+   * @brief Método de renderizado (no utilizado en esta clase).
+   * @param window Ventana donde potencialmente se podría renderizar.
+   */
+  void render(const EngineUtilities::TSharedPointer<Window>& window) override {}
+
+  /**
+   * @brief Método para liberar recursos (no utilizado en esta clase).
+   */
+  void destroy() {}
+
+  /**
+   * @brief Mueve la posición hacia un objetivo a velocidad constante.
+   *
+   * @param targetPosition Posición destino.
+   * @param speed Velocidad de movimiento en unidades por segundo.
+   * @param deltaTime Tiempo transcurrido desde el último frame.
+   * @param range Distancia mínima para detener el movimiento.
+   *
+   * @note El vector dirección se normaliza para mantener velocidad constante.
+   */
+  void seek(const sf::Vector2f& targetPosition,
+    float speed,
+    float deltaTime,
+    float range) {
     sf::Vector2f direction = targetPosition - position;
     float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
 
@@ -48,53 +92,40 @@ public:
     }
   }
 
-  void
-  setPosition(const sf::Vector2f& _position) {
-    position = _position;
-  }
-  
-  void
-  setRotation(const sf::Vector2f& _rotation) {
-    rotation = _rotation;
-  }
-  
-  void
-  setScale(const sf::Vector2f& _scale) {
-    scale = _scale;
-  }
+  /** @brief Asigna la posición. */
+  void setPosition(const sf::Vector2f& _position) { position = _position; }
 
-  sf::Vector2f& 
-  getPosition() {
-    return position;
-  }
-  
-  
-  sf::Vector2f&
-  getRotation() {
-    return rotation;
-  }
+  /** @brief Asigna la rotación. */
+  void setRotation(const sf::Vector2f& _rotation) { rotation = _rotation; }
 
-  sf::Vector2f& 
-  getScale() {
-    return scale;
-  }
+  /** @brief Asigna la escala. */
+  void setScale(const sf::Vector2f& _scale) { scale = _scale; }
 
-  float* 
-  getPosData() {
-    return &position.x;
-  }
-  
-  float* 
-  getRotData() {
-    return &rotation.x;
-  }
-  
-  float* 
-  getScaData() {
-    return &scale.x;
-  }
+  /** @brief Obtiene la posición. */
+  sf::Vector2f& getPosition() { return position; }
+
+  /** @brief Obtiene la rotación. */
+  sf::Vector2f& getRotation() { return rotation; }
+
+  /** @brief Obtiene la escala. */
+  sf::Vector2f& getScale() { return scale; }
+
+  /**
+   * @brief Devuelve un puntero crudo a los datos de posición.
+   * @return Puntero a `float` que apunta a `position.x`.
+   *
+   * @warning El puntero es válido mientras el objeto exista.
+   */
+  float* getPosData() { return &position.x; }
+
+  /** @brief Devuelve un puntero crudo a los datos de rotación. */
+  float* getRotData() { return &rotation.x; }
+
+  /** @brief Devuelve un puntero crudo a los datos de escala. */
+  float* getScaData() { return &scale.x; }
+
 private:
-  sf::Vector2f position;  // Posición del objeto
-  sf::Vector2f rotation;  // Rotación del objeto
-  sf::Vector2f scale;     // Escala del objeto
+  sf::Vector2f position;  ///< Posición del objeto en coordenadas 2D.
+  sf::Vector2f rotation;  ///< Rotación del objeto (en grados o radianes según uso).
+  sf::Vector2f scale;     ///< Escala del objeto.
 };

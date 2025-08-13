@@ -42,11 +42,17 @@
     <ClCompile Include="src\Window.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
-    <ClCompile Include="src\ECS\Actor.cpp">
-      <Filter>Archivos de origen\ECS</Filter>
-    </ClCompile>
     <ClCompile Include="src\Utilities\CVector2.cpp">
       <Filter>Archivos de origen\Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="src\EngineGUI.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ResourceManager.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ECS\Actor.cpp">
+      <Filter>Archivos de origen\ECS</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -87,6 +93,15 @@
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="include\ECS\Transform.h">
+      <Filter>ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ResourceManager.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="include\EngineGUI.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\Texture.h">
       <Filter>ECS</Filter>
     </ClInclude>
   </ItemGroup>

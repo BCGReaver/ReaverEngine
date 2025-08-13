@@ -27,8 +27,6 @@
  * SOFTWARE.
 */
 #pragma once
-// #include <atomic> // Para un shared_ptr robusto y thread-safe, necesitarías esto.
-#include <utility> // Para std::forward en MakeShared
 
 namespace EngineUtilities {
 	/**
@@ -58,9 +56,6 @@ namespace EngineUtilities {
 
 		/**
 		 * @brief Constructor desde un puntero crudo y un recuento de referencias.
-		 * Este es CRÍTICO para dynamic_pointer_cast y static_pointer_cast
-		 * ya que permite que el nuevo puntero compartido APUNTE AL MISMO CONTADOR
-		 * de referencias del puntero compartido original.
 		 *
 		 * @param rawPtr Puntero crudo al objeto gestionado.
 		 * @param existingRefCount Puntero al recuento de referencias existente.
@@ -117,14 +112,10 @@ namespace EngineUtilities {
 			if (this != &other)
 			{
 				// Disminuir el recuento de referencias del objeto actual
-				if (refCount)
+				if (refCount && --(*refCount) == 0)
 				{
-					--(*refCount);
-					if (*refCount == 0)
-					{
-						delete ptr;
-						delete refCount;
-					}
+					delete ptr;
+					delete refCount;
 				}
 				// Copiar datos del otro puntero compartido
 				ptr = other.ptr;
@@ -151,14 +142,10 @@ namespace EngineUtilities {
 			if (this != &other)
 			{
 				// Liberar el objeto actual
-				if (refCount)
+				if (refCount && --(*refCount) == 0)
 				{
-					--(*refCount);
-					if (*refCount == 0)
-					{
-						delete ptr;
-						delete refCount;
-					}
+					delete ptr;
+					delete refCount;
 				}
 				// Transferir los datos del otro puntero compartido
 				ptr = other.ptr;
@@ -169,6 +156,12 @@ namespace EngineUtilities {
 			return *this;
 		}
 
+		template<typename U>
+		TSharedPointer(const TSharedPointer<U>& other)
+			: ptr(other.ptr), refCount(other.refCount) {
+			if (refCount) ++(*refCount);
+		}
+
 		/**
 		 * @brief Destructor.
 		 *
@@ -177,14 +170,10 @@ namespace EngineUtilities {
 		 */
 		~TSharedPointer()
 		{
-			if (refCount)
+			if (refCount && --(*refCount) == 0)
 			{
-				--(*refCount);
-				if (*refCount == 0)
-				{
-					delete ptr;
-					delete refCount;
-				}
+				delete ptr;
+				delete refCount;
 			}
 		}
 
@@ -202,6 +191,11 @@ namespace EngineUtilities {
 		 */
 		T* operator->() const { return ptr; }
 
+		// Agregar una función para comprobar si el puntero es válido
+		operator bool() const {
+			return ptr != nullptr;
+		}
+
 		/**
 		 * @brief Obtener el puntero crudo.
 		 *
@@ -216,47 +210,8 @@ namespace EngineUtilities {
 		 */
 		bool isNull() const { return ptr == nullptr; }
 
-		/**
-		 * @brief Operador de conversión a booleano.
-		 * Permite que TSharedPointer sea usado directamente en contextos booleanos (ej. if (ptr)).
-		 * @return true si el puntero interno no es nulo, false en caso contrario.
-		 */
-		explicit operator bool() const {
-			return ptr != nullptr;
-		}
-
-		/**
-		 * @brief Realiza un dynamic_cast a un nuevo TSharedPointer.
-		 * Es crucial que este método cree un nuevo TSharedPointer que comparta el mismo refCount.
-		 * @tparam U El tipo al que se desea castear. Debe derivar del tipo actual T.
-		 * @return Un TSharedPointer<U> si el cast es exitoso, un TSharedPointer<U> nulo en caso contrario.
-		 */
-		template<typename U>
-		TSharedPointer<U> dynamic_pointer_cast() const {
-			U* castedPtr = dynamic_cast<U*>(ptr);
-			if (castedPtr) {
-				// Si el cast es exitoso, crea un nuevo TSharedPointer que apunte al mismo recurso
-				// y comparta el mismo contador de referencias.
-				return TSharedPointer<U>(castedPtr, refCount);
-			}
-			return TSharedPointer<U>(); // Retorna un puntero nulo si el cast falla
-		}
-
-		/**
-		 * @brief Realiza un static_cast a un nuevo TSharedPointer.
-		 * @tparam U El tipo al que se desea castear.
-		 * @return Un TSharedPointer<U> con el puntero casteado.
-		 */
-		template<typename U>
-		TSharedPointer<U> static_pointer_cast() const {
-			U* castedPtr = static_cast<U*>(ptr);
-			// static_cast siempre es exitoso si las jerarquías son correctas.
-			return TSharedPointer<U>(castedPtr, refCount); // Comparte el mismo contador de referencias
-		}
-
-
-	public: // Considera si estos deberían ser públicos o privados con getters/setters si no quieres acceso directo.
-		T* ptr;
+	public:
+		T* ptr;       ///< Puntero al objeto gestionado.
 		int* refCount; ///< Puntero al recuento de referencias.
 
 		/**
@@ -279,21 +234,17 @@ namespace EngineUtilities {
 		}
 
 		/**
-		 * @brief Libera el objeto actual y opcionalmente asigna un nuevo objeto.
-		 *
-		 * @param newPtr Nuevo puntero crudo al objeto que se va a gestionar (por defecto es nullptr).
-		 */
+				 * @brief Libera el objeto actual y opcionalmente asigna un nuevo objeto.
+				 *
+				 * @param newPtr Nuevo puntero crudo al objeto que se va a gestionar (por defecto es nullptr).
+				 */
 		void reset(T* newPtr = nullptr)
 		{
 			// Disminuir el recuento de referencias del objeto actual
-			if (refCount)
+			if (refCount && --(*refCount) == 0)
 			{
-				--(*refCount);
-				if (*refCount == 0)
-				{
-					delete ptr;
-					delete refCount;
-				}
+				delete ptr;
+				delete refCount;
 			}
 
 			// Si newPtr es nullptr, asignar nullptr al puntero y recuento de referencias
@@ -309,6 +260,22 @@ namespace EngineUtilities {
 				refCount = new int(1);
 			}
 		}
+
+		// Método de conversión para hacer cast dinámico
+		template<typename U>
+		TSharedPointer<U> dynamic_pointer_cast() const {
+			// Intenta convertir el puntero de tipo T a U
+			U* castedPtr = dynamic_cast<U*>(ptr);
+			if (castedPtr) {
+				// Si la conversión es exitosa, devuelve un nuevo TSharedPointer<U>
+				return TSharedPointer<U>(castedPtr, refCount);
+			}
+			else {
+				// Si falla la conversión, devuelve un TSharedPointer<U> nulo
+				return TSharedPointer<U>();
+			}
+		}
+
 	};
 
 	/**
@@ -320,8 +287,9 @@ namespace EngineUtilities {
 	 * @return Un objeto TSharedPointer gestionando un nuevo objeto de tipo T.
 	 */
 	template<typename T, typename... Args>
-	TSharedPointer<T> MakeShared(Args&&... args)
+	TSharedPointer<T> MakeShared(Args... args)
 	{
-		return TSharedPointer<T>(new T(std::forward<Args>(args)...));
+		return TSharedPointer<T>(new T(args...));
 	}
+
 }

@@ -51,8 +51,9 @@ namespace EngineUtilities {
 		 *
 		 * @param sharedPtr TSharedPointer desde el cual se observará el objeto.
 		 */
-		TWeakPointer(const TSharedPointer<T>& sharedPtr) 
-		: ptr(sharedPtr.ptr), refCount(sharedPtr.refCount) {}
+		TWeakPointer(const TSharedPointer<T>& sharedPtr)
+			: ptr(sharedPtr.ptr), refCount(sharedPtr.refCount) {
+		}
 
 		/**
 		 * @brief Convertir TWeakPointer a TSharedPointer.
