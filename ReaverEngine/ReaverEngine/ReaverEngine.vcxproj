@@ -19,6 +19,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\ThirdParties\imgui-master\imgui.cpp" />
+    <ClCompile Include="..\ThirdParties\imgui-master\imgui_demo.cpp" />
+    <ClCompile Include="..\ThirdParties\imgui-master\imgui_draw.cpp" />
+    <ClCompile Include="..\ThirdParties\imgui-master\imgui_tables.cpp" />
+    <ClCompile Include="..\ThirdParties\imgui-master\imgui_widgets.cpp" />
+    <ClCompile Include="..\ThirdParties\imgui-sfml-master\imgui-SFML.cpp" />
     <ClCompile Include="src\BaseApp.cpp" />
     <ClCompile Include="src\CShape.cpp" />
     <ClCompile Include="src\ECS\Actor.cpp" />
@@ -29,6 +35,15 @@
     <ClCompile Include="src\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\ThirdParties\imgui-master\imconfig.h" />
+    <ClInclude Include="..\ThirdParties\imgui-master\imgui.h" />
+    <ClInclude Include="..\ThirdParties\imgui-master\imgui_internal.h" />
+    <ClInclude Include="..\ThirdParties\imgui-master\imstb_rectpack.h" />
+    <ClInclude Include="..\ThirdParties\imgui-master\imstb_textedit.h" />
+    <ClInclude Include="..\ThirdParties\imgui-master\imstb_truetype.h" />
+    <ClInclude Include="..\ThirdParties\imgui-sfml-master\imconfig-SFML.h" />
+    <ClInclude Include="..\ThirdParties\imgui-sfml-master\imgui-SFML.h" />
+    <ClInclude Include="..\ThirdParties\imgui-sfml-master\imgui-SFML_export.h" />
     <ClInclude Include="include\BaseApp.h" />
     <ClInclude Include="include\CShape.h" />
     <ClInclude Include="include\ECS\Actor.h" />
