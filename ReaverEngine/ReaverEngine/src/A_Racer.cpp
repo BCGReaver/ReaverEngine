@@ -1,6 +1,5 @@
 #include "A_Racer.h"
 
-// Resuelve la ruta de Transform automáticamente
 #if __has_include("ECS/Transform.h")
 #include "ECS/Transform.h"
 #elif __has_include("Transform.h")
@@ -15,6 +14,10 @@
 static inline float vlen(const sf::Vector2f& v) {
   return std::sqrt(v.x * v.x + v.y * v.y);
 }
+static inline sf::Vector2f norm(const sf::Vector2f& v) {
+  float l = vlen(v); if (l <= 1e-6f) return sf::Vector2f(0.f, 0.f);
+  return sf::Vector2f(v.x / l, v.y / l);
+}
 static inline float clamp01(float x) { return std::max(0.f, std::min(1.f, x)); }
 
 A_Racer::A_Racer(const std::string& name, int /*playerId*/)
@@ -28,26 +31,28 @@ void A_Racer::setPath(const std::vector<sf::Vector2f>& pathPoints) {
       xf->setPosition(path.front());
       xf->setRotation(0.f);
     }
+    m_debugTarget = path.front();
   }
   currentWaypointIndex = (path.size() > 1 ? 1 : 0);
+  m_lastIndex = currentWaypointIndex;
 
-  // **Clave**: sincroniza el drawable con el Transform inicial
+  // Sincroniza drawable con transform
   Actor::update(0.f);
 }
 
 void A_Racer::reset() {
   m_currentLap = 0;
-  m_crossedLastFrame = false;
 
   if (!path.empty()) {
     if (auto xf = getComponent<Transform>()) {
       xf->setPosition(path.front());
       xf->setRotation(0.f);
     }
+    m_debugTarget = path.front();
   }
   currentWaypointIndex = (path.size() > 1 ? 1 : 0);
+  m_lastIndex = currentWaypointIndex;
 
-  // **Clave**: sincroniza tras el reset
   Actor::update(0.f);
 }
 
@@ -64,18 +69,37 @@ float A_Racer::getProgress() const {
   const sf::Vector2f A = path[prev];
   const sf::Vector2f B = path[cur];
 
-  const float segLen = std::max(1e-4f, vlen(B - A));
-  const float t = 1.f - clamp01(vlen(B - pos) / segLen);
+  const float ABx = B.x - A.x, ABy = B.y - A.y;
+  const float segLen = std::max(1e-4f, std::sqrt(ABx * ABx + ABy * ABy));
+  const float dx = B.x - pos.x, dy = B.y - pos.y;
+  const float t = 1.f - clamp01(std::sqrt(dx * dx + dy * dy) / segLen);
 
   return clamp01((prev + t) / float(N));
 }
 
 void A_Racer::update(float dt) {
-  if (path.size() >= 2) {
-    doPathFollowing(dt);
+  if (isFinished()) {
+    Actor::update(dt);
+    return;
   }
 
-  // **MUY IMPORTANTE**: sincroniza el drawable con el Transform cada frame
+  const int prevIndex = currentWaypointIndex;
+
+  // Comportamiento actual
+  if (path.size() >= 2) {
+    switch (m_behavior) {
+    case Steering::PathFollow: doPathFollowing(dt); break;
+    case Steering::Seek:       doSeek(m_debugTarget, dt); break;
+    case Steering::Arrive:     doArrive(m_debugTarget, dt); break;
+    }
+  }
+
+  // Vuelta cuando el índice hace wrap (e.g., pasa de 41 -> 0)
+  if (currentWaypointIndex < prevIndex) {
+    ++m_currentLap;
+  }
+  m_lastIndex = currentWaypointIndex;
+
   Actor::update(dt);
 }
 
@@ -117,7 +141,7 @@ void A_Racer::doPathFollowing(float dt) {
   sf::Vector2f to = pursue - pos;
   float d = std::hypot(to.x, to.y);
   if (d > 1e-4f) {
-    sf::Vector2f dir = { to.x / d, to.y / d };
+    sf::Vector2f dir = sf::Vector2f(to.x / d, to.y / d);
     float brakeRadius = lookaheadDistance * 1.2f;
     float speed = (d < brakeRadius) ? (m_maxSpeed * (d / brakeRadius)) : m_maxSpeed;
 
@@ -127,4 +151,45 @@ void A_Racer::doPathFollowing(float dt) {
     xf->setRotation(angleDeg);
     xf->setPosition(pos);
   }
+
+  // Para demo de Seek/Arrive: target = siguiente punto
+  m_debugTarget = B;
+}
+
+void A_Racer::doSeek(const sf::Vector2f& target, float dt) {
+  auto xf = getComponent<Transform>();
+  if (!xf) return;
+  sf::Vector2f pos = xf->getPosition();
+  sf::Vector2f desired = target - pos;
+  float d = vlen(desired);
+  if (d < 1e-4f) return;
+
+  sf::Vector2f vel = norm(desired) * m_maxSpeed;
+  pos += vel * dt;
+
+  float angleDeg = std::atan2(vel.y, vel.x) * 180.f / 3.14159265f;
+  xf->setRotation(angleDeg);
+  xf->setPosition(pos);
+}
+
+void A_Racer::doArrive(const sf::Vector2f& target, float dt) {
+  auto xf = getComponent<Transform>();
+  if (!xf) return;
+
+  sf::Vector2f pos = xf->getPosition();
+  sf::Vector2f to = target - pos;
+  float d = vlen(to);
+  if (d < m_arriveStopRadius) return; // ya llegó
+
+  float speed = m_maxSpeed;
+  if (d < m_arriveSlowRadius) {
+    speed = m_maxSpeed * (d / m_arriveSlowRadius); // desacelera
+  }
+
+  sf::Vector2f vel = norm(to) * speed;
+  pos += vel * dt;
+
+  float angleDeg = std::atan2(vel.y, vel.x) * 180.f / 3.14159265f;
+  xf->setRotation(angleDeg);
+  xf->setPosition(pos);
 }
