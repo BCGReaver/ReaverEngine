@@ -1,4 +1,21 @@
-﻿#include "BaseApp.h"
+﻿/**
+ * @file BaseApp.cpp
+ * @brief Loop principal de la app: init → update → render → destroy, con sistema de carrera y edición de waypoints.
+ *
+ * @details
+ * Este módulo se encarga de:
+ * - Inicializar ventana, GUI, pista, waypoints y NPCs.
+ * - Cargar/guardar waypoints desde/para CSV.
+ * - Controlar el estado de la carrera (Ready → Countdown → Running → Finished).
+ * - Dibujar HUD (laps, ranking, controles) y un mini editor de waypoints in-app.
+ *
+ * Estilo:
+ * - 2 espacios de indentación.
+ * - Métodos/variables locales en lowerCamelCase.
+ * - Miembros privados con prefijo m_.
+ */
+
+#include "BaseApp.h"
 #include "ResourceManager.h"
 
 #include <fstream>
@@ -6,14 +23,28 @@
 #include <string>
 #include <algorithm>
 
-//------------------------------------------------------------------------------
-// Destructor
-//------------------------------------------------------------------------------
+ //------------------------------------------------------------------------------
+ // Destructor
+ //------------------------------------------------------------------------------
+
+ /**
+  * @brief Destructor por defecto.
+  */
 BaseApp::~BaseApp() {}
 
 //------------------------------------------------------------------------------
 // Run loop
 //------------------------------------------------------------------------------
+
+/**
+ * @brief Punto de arranque del ciclo principal de la app.
+ * @return 0 si todo ok.
+ *
+ * @details
+ * - Valida `init()`.
+ * - Mientras la ventana esté abierta: procesa eventos, actualiza y renderiza.
+ * - Al salir: `destroy()`.
+ */
 int BaseApp::run() {
   if (!init()) {
     ERROR("BaseApp", "run", "Initializes result on a false statemente, check method validations");
@@ -30,6 +61,11 @@ int BaseApp::run() {
 //------------------------------------------------------------------------------
 // Init
 //------------------------------------------------------------------------------
+
+/**
+ * @brief Inicializa ventana, GUI, pista, waypoints, marcadores, NPCs y estado de carrera.
+ * @return true si todo ok; false si falla algo crítico (como crear la ventana).
+ */
 bool BaseApp::init() {
   ResourceManager& resourceMan = ResourceManager::getInstance();
 
@@ -47,7 +83,7 @@ bool BaseApp::init() {
     initWaypoints_DefaultTrack();
   }
 
-  // --- Actor pista
+  // --- Actor pista (rectángulo texturizado con el track)
   m_ACirlce = EngineUtilities::MakeShared<Actor>("Track");
   if (!m_ACirlce) {
     ERROR("BaseApp", "init", "Failed to create Track actor");
@@ -62,10 +98,10 @@ bool BaseApp::init() {
   m_ACirlce->setTexture(resourceMan.getTexture("Sprites/Track"));
   m_actors.push_back(m_ACirlce);
 
-  // --- Marcadores de WPs
+  // --- Marcadores visibles de WPs (si están habilitados)
   buildWaypointMarkers();
 
-  // --- NPCs (visual igual que pista) + variación y parrilla
+  // --- NPCs (racers): configuración base + parrilla sobre el primer segmento del path
   struct NpcCfg {
     const char* name;
     const char* texKey;
@@ -81,7 +117,7 @@ bool BaseApp::init() {
     { "TP", "Sprites/TP", {1.5f,1.5f}, -9.f,  7.f, 0.7f, 0.07f }
   };
 
-  // Parrilla (fila india) sobre el primer segmento del path
+  // Vector director del 1er tramo para colocar parrilla “en fila”
   sf::Vector2f A = m_waypoints.front();
   sf::Vector2f B = (m_waypoints.size() > 1 ? m_waypoints[1] : sf::Vector2f(A.x + 1.f, A.y));
   sf::Vector2f T = B - A;
@@ -103,7 +139,7 @@ bool BaseApp::init() {
 
     npc->setPath(m_waypoints);
 
-    // Guardamos la posición de parrilla para Reset/Countdown
+    // Slot de parrilla hacia atrás sobre el tramo AB
     sf::Vector2f startPos = A - T * (slotGap * float(idx));
     m_gridPositions.push_back(startPos);
 
@@ -125,13 +161,23 @@ bool BaseApp::init() {
   }
 
   applyRaceConfigToRacers();
-  resetRace(true);   // Ready + a parrilla
+  resetRace(true);   ///< Deja en Ready y coloca en parrilla
   return true;
 }
 
 //------------------------------------------------------------------------------
 // Update
 //------------------------------------------------------------------------------
+
+/**
+ * @brief Lógica por frame: tiempos, actores y GUI/HUD.
+ *
+ * @details
+ * - Actualiza deltaTime de la ventana.
+ * - Avanza timers de carrera (countdown, race time).
+ * - Actualiza actores según estado (Running o pausado).
+ * - Actualiza GUI (outliner/inspector) y dibuja HUD.
+ */
 void BaseApp::update() {
   if (!m_windowPtr.isNull()) m_windowPtr->update();
   const float dt = m_windowPtr->deltaTime.asSeconds();
@@ -154,6 +200,10 @@ void BaseApp::update() {
 //------------------------------------------------------------------------------
 // Render
 //------------------------------------------------------------------------------
+
+/**
+ * @brief Dibuja pista, marcadores, racers, GUI y presenta en pantalla.
+ */
 void BaseApp::render() {
   if (!m_windowPtr) return;
   m_windowPtr->clear();
@@ -181,6 +231,10 @@ void BaseApp::render() {
 //------------------------------------------------------------------------------
 // Destroy
 //------------------------------------------------------------------------------
+
+/**
+ * @brief Limpieza de subsistemas (GUI, etc.).
+ */
 void BaseApp::destroy() {
   m_engineGUI.destroy();
 }
@@ -188,6 +242,14 @@ void BaseApp::destroy() {
 // ============================================================================
 // Waypoints load/save
 // ============================================================================
+
+/**
+ * @brief Carga waypoints desde un CSV (x,y por línea, admite comentarios con '#').
+ * @param path Ruta al CSV.
+ * @return true si se cargó al menos un punto válido.
+ *
+ * @note Limpia `m_waypoints` y resetea `m_currentWaypointIndex` a 0.
+ */
 bool BaseApp::loadWaypointsCSV(const std::string& path) {
   std::ifstream in(path);
   if (!in.is_open()) {
@@ -211,6 +273,11 @@ bool BaseApp::loadWaypointsCSV(const std::string& path) {
   return true;
 }
 
+/**
+ * @brief Guarda los waypoints actuales a CSV como "x,y" por línea.
+ * @param path Ruta destino.
+ * @return true si pudo abrir y escribir el archivo.
+ */
 bool BaseApp::saveWaypointsCSV(const std::string& path) {
   std::ofstream out(path, std::ios::trunc);
   if (!out.is_open()) return false;
@@ -219,6 +286,9 @@ bool BaseApp::saveWaypointsCSV(const std::string& path) {
   return true;
 }
 
+/**
+ * @brief Inicializa un track por defecto hardcodeado (fallback si no hay CSV).
+ */
 void BaseApp::initWaypoints_DefaultTrack() {
   // (mismos puntos de antes; ajusta aquí si quieres hardcodear uno nuevo)
   m_waypoints.clear();
@@ -270,6 +340,11 @@ void BaseApp::initWaypoints_DefaultTrack() {
   m_currentWaypointIndex = 0;
 }
 
+/**
+ * @brief Crea actores marcadores de los waypoints (círculos) y los agrega a la escena si cumplen flag.
+ *
+ * @note Primer WP en verde, último en rojo, resto en cian semi-transparente.
+ */
 void BaseApp::buildWaypointMarkers() {
   m_waypointMarkers.clear();
   if (!m_showWaypointMarkers) return;
@@ -292,6 +367,12 @@ void BaseApp::buildWaypointMarkers() {
   }
 }
 
+/**
+ * @brief Sincroniza la posición de los marcadores con `m_waypoints`.
+ *
+ * @details
+ * Si el número de puntos cambió, reconstruye por completo los marcadores.
+ */
 void BaseApp::refreshMarkersFromWaypoints() {
   // Asume mismo tamaño. Si cambia el número, vuelve a buildWaypointMarkers().
   if (m_waypointMarkers.size() != m_waypoints.size()) {
@@ -309,12 +390,15 @@ void BaseApp::refreshMarkersFromWaypoints() {
   }
 }
 
+/**
+ * @brief Reasigna el path a todos los racers y opcionalmente los devuelve a parrilla.
+ */
 void BaseApp::rebuildRacersPath() {
   for (auto& r : m_racers) {
     if (r.isNull()) continue;
     r->setPath(m_waypoints); // también resetea su posición al primer WP
   }
-  // Vuelve a parrilla (opcional); si no quieres, comenta:
+  // Vuelve a parrilla (opcional)
   for (size_t i = 0; i < m_racers.size() && i < m_gridPositions.size(); ++i) {
     if (auto xf = m_racers[i]->getComponent<Transform>()) xf->setPosition(m_gridPositions[i]);
   }
@@ -323,6 +407,12 @@ void BaseApp::rebuildRacersPath() {
 // ============================================================================
 // Helpers HUD / carrera
 // ============================================================================
+
+/**
+ * @brief Helper para cargar una textura y loguear en caso de error.
+ * @param keyNoExt Clave/ruta sin extensión.
+ * @return true si cargó ok.
+ */
 bool BaseApp::loadTextureOrLog(const std::string& keyNoExt) {
   ResourceManager& rm = ResourceManager::getInstance();
   if (!rm.loadTexture(keyNoExt, "png")) {
@@ -332,10 +422,17 @@ bool BaseApp::loadTextureOrLog(const std::string& keyNoExt) {
   return true;
 }
 
+/**
+ * @brief Aplica configuración de carrera (laps) a todos los racers.
+ */
 void BaseApp::applyRaceConfigToRacers() {
   for (auto& r : m_racers) if (!r.isNull()) r->setTotalLaps(m_totalLaps);
 }
 
+/**
+ * @brief Resetea el estado de carrera y devuelve racers a parrilla.
+ * @param hardResetSprites Si true, fuerza un update(0) para sincronizar visuals.
+ */
 void BaseApp::resetRace(bool hardResetSprites) {
   m_state = RaceState::Ready;
   m_raceTime = 0.f;
@@ -355,12 +452,19 @@ void BaseApp::resetRace(bool hardResetSprites) {
   }
 }
 
+/**
+ * @brief Inicia el conteo regresivo para pasar a estado Running.
+ */
 void BaseApp::startCountdown() {
   m_state = RaceState::Countdown;
   m_countLeft = m_countdown;
   m_clock.restart();
 }
 
+/**
+ * @brief Actualiza conteo regresivo, tiempo de carrera y detecta si todos terminaron.
+ * @param dt Delta time en segundos.
+ */
 void BaseApp::updateRaceTimers(float dt) {
   if (m_state == RaceState::Countdown) {
     m_countLeft -= dt;
@@ -382,6 +486,13 @@ void BaseApp::updateRaceTimers(float dt) {
   }
 }
 
+/**
+ * @brief Calcula y muestra el ranking actual en la UI (ImGui).
+ *
+ * @details
+ * - Score = lap actual + progreso dentro de la vuelta.
+ * - Ordena descendentemente y lista con `BulletText`.
+ */
 void BaseApp::computeAndShowRanking() {
   struct Entry { EngineUtilities::TSharedPointer<A_Racer> r; float score; };
   std::vector<Entry> list;
@@ -404,6 +515,15 @@ void BaseApp::computeAndShowRanking() {
 // ---------------------------------------------------------------------------
 // HUD principal + Editor de Waypoints
 // ---------------------------------------------------------------------------
+
+/**
+ * @brief Dibuja el subpanel para editar waypoints en caliente.
+ *
+ * @details
+ * - Muestra el total y un índice seleccionable.
+ * - Permite arrastrar float2 y hacer “nudges” ±1/±5 por eje.
+ * - Botones para guardar CSV, reconstruir marcadores y rearmar paths.
+ */
 void BaseApp::drawWaypointEditor() {
   if (!m_wpEditorOpen || m_waypoints.empty()) return;
 
@@ -456,6 +576,9 @@ void BaseApp::drawWaypointEditor() {
   }
 }
 
+/**
+ * @brief Ventana HUD principal: estado de carrera, controles, laps, modos de steering y ranking.
+ */
 void BaseApp::drawHUD() {
   ImGui::SetNextWindowBgAlpha(0.35f);
   if (ImGui::Begin("HUD Carrera", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {

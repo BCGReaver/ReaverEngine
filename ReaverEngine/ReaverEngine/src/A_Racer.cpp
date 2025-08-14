@@ -1,3 +1,19 @@
+/**
+ * @file A_Racer.cpp
+ * @brief Lógica de un corredor (NPC) que sigue un path con steering (PathFollow/Seek/Arrive).
+ *
+ * @details
+ * Este archivo implementa el comportamiento de un racer:
+ * - Sigue un conjunto de waypoints (path) con lookahead y offset lateral.
+ * - Permite modos de steering: PathFollow, Seek y Arrive.
+ * - Aplica "ruido" (wander) y jitter de velocidad para que no todos se muevan igual.
+ *
+ * Notas rápidas de estilo:
+ * - Variables/métodos en camelCase (primera minúscula, luego Mayúscula).
+ * - Miembros con prefijo m_.
+ * - Tabs: 2 espacios (para que se vea limpito).
+ */
+
 #include "A_Racer.h"
 
 #if __has_include("ECS/Transform.h")
@@ -12,15 +28,49 @@
 #include <algorithm>
 #include <functional> // std::hash
 
+ // ============================================================================
+ // Helpers internos (estáticos) — funciones chiquitas de utilidad
+ // ============================================================================
+
+ /**
+  * @brief Magnitud (longitud) de un vector 2D.
+  * @param v Vector de entrada.
+  * @return |v| en float.
+  */
 static inline float vlen(const sf::Vector2f& v) {
   return std::sqrt(v.x * v.x + v.y * v.y);
 }
+
+/**
+ * @brief Normaliza un vector 2D. Si la longitud es ~0, devuelve (0,0).
+ * @param v Vector de entrada.
+ * @return v normalizado.
+ */
 static inline sf::Vector2f norm(const sf::Vector2f& v) {
   float l = vlen(v); if (l <= 1e-6f) return sf::Vector2f(0.f, 0.f);
   return sf::Vector2f(v.x / l, v.y / l);
 }
+
+/**
+ * @brief Limita un valor al rango [0,1].
+ * @param x Valor de entrada.
+ * @return x clampado a [0, 1].
+ */
 static inline float clamp01(float x) { return std::max(0.f, std::min(1.f, x)); }
 
+// ============================================================================
+// A_Racer — implementación
+// ============================================================================
+
+/**
+ * @brief Crea un racer con nombre y genera fases pseudo-aleatorias (por nombre).
+ * @param name Nombre del NPC (se usa para hash y fases del wander).
+ * @param playerId (Sin uso por ahora, por si luego quieres racers player).
+ *
+ * @details
+ * Las fases m_phase1 y m_phase2 se calculan con un hash del nombre
+ * para que cada NPC "ondée" distinto y no se vean clonados.
+ */
 A_Racer::A_Racer(const std::string& name, int /*playerId*/)
   : Actor(name) {
   // Fases únicas por nombre para que no “oscilen igual”
@@ -29,6 +79,15 @@ A_Racer::A_Racer(const std::string& name, int /*playerId*/)
   m_phase2 = float((h & 0xFFFF0000) >> 16) / 65535.f;
 }
 
+/**
+ * @brief Define el path (lista de waypoints) y resetea al inicio.
+ * @param pathPoints Vector de puntos (en orden) que forman el circuito.
+ *
+ * @details
+ * - Mueve el Transform al primer punto del path.
+ * - Marca el siguiente waypoint como índice actual.
+ * - Sincroniza el drawable con el transform llamando `Actor::update(0)`.
+ */
 void A_Racer::setPath(const std::vector<sf::Vector2f>& pathPoints) {
   path = pathPoints;
   if (!path.empty()) {
@@ -45,6 +104,13 @@ void A_Racer::setPath(const std::vector<sf::Vector2f>& pathPoints) {
   Actor::update(0.f);
 }
 
+/**
+ * @brief Resetea el estado del NPC a la salida (lap = 0, posición en el primer WP).
+ *
+ * @details
+ * - Reubica al primer punto del path y resetea índices y ruido.
+ * - Sincroniza el drawable con `Actor::update(0)`.
+ */
 void A_Racer::reset() {
   m_currentLap = 0;
 
@@ -62,6 +128,14 @@ void A_Racer::reset() {
   Actor::update(0.f);
 }
 
+/**
+ * @brief Progreso normalizado a lo largo del circuito [0..1].
+ * @return Progreso actual (vuelta + avance dentro del segmento) como fracción.
+ *
+ * @details
+ * Calcula qué tan cerca estás del WP actual (y el previo) dentro del total de segmentos.
+ * Útil para ranking simple: `score = lap + progress`.
+ */
 float A_Racer::getProgress() const {
   const int N = (int)path.size();
   if (N < 2) return 0.f;
@@ -83,6 +157,15 @@ float A_Racer::getProgress() const {
   return clamp01((prev + t) / float(N));
 }
 
+/**
+ * @brief Update por frame del racer: steering + laps + sync con Actor.
+ * @param dt Delta time en segundos.
+ *
+ * @details
+ * - Avanza el ruido (wander).
+ * - Aplica el comportamiento actual (PathFollow/Seek/Arrive).
+ * - Detecta cuando se completa una vuelta (wrap de índice).
+ */
 void A_Racer::update(float dt) {
   if (isFinished()) { Actor::update(dt); return; }
 
@@ -107,6 +190,18 @@ void A_Racer::update(float dt) {
   Actor::update(dt);
 }
 
+/**
+ * @brief Steering tipo Path Following con lookahead + offset lateral + wander.
+ * @param dt Delta time en segundos.
+ *
+ * @details
+ * - Proyecta la posición en el segmento AB.
+ * - Define un punto de persecución con lookahead (y frena cerca de B).
+ * - Aplica offset lateral fijo y oscilación senoidal (wander).
+ * - Actualiza posición y rotación del Transform.
+ *
+ * @note Cuando se alcanza B, avanza al siguiente segmento (con wrap).
+ */
 void A_Racer::doPathFollowing(float dt) {
   auto xf = getComponent<Transform>();
   if (!xf || path.size() < 2) return;
@@ -184,6 +279,14 @@ void A_Racer::doPathFollowing(float dt) {
   m_debugTarget = B;
 }
 
+/**
+ * @brief Steering tipo Seek: ir directo a un objetivo con velocidad máxima.
+ * @param target Punto destino.
+ * @param dt Delta time en segundos.
+ *
+ * @details
+ * Mueve la posición hacia el target a `m_maxSpeed` y orienta la rotación con atan2.
+ */
 void A_Racer::doSeek(const sf::Vector2f& target, float dt) {
   auto xf = getComponent<Transform>();
   if (!xf) return;
@@ -200,6 +303,15 @@ void A_Racer::doSeek(const sf::Vector2f& target, float dt) {
   xf->setPosition(pos);
 }
 
+/**
+ * @brief Steering tipo Arrive: busca el objetivo desacelerando al acercarse.
+ * @param target Punto destino.
+ * @param dt Delta time en segundos.
+ *
+ * @details
+ * - Si estás dentro de `m_arriveStopRadius`, ya no te mueves.
+ * - Si estás dentro de `m_arriveSlowRadius`, reduces la velocidad gradualmente.
+ */
 void A_Racer::doArrive(const sf::Vector2f& target, float dt) {
   auto xf = getComponent<Transform>();
   if (!xf) return;
