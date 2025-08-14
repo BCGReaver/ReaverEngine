@@ -138,15 +138,15 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>./include/;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\SFML-3.0.0\include;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\imgui-sfml-master;C:\Universidad\EngineUtilities\EngineUtilities\EngineUtilities\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./include/;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\imgui-master;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\imgui-sfml-master;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\SFML-3.0.0\include</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <IntrinsicFunctions>true</IntrinsicFunctions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)lib/$(PlatformTarget)/;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\SFML-2.6.1\SFML-2.6.1\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>sfml-graphics-d.lib;sfml-window-d.lib;sfml-system-d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)lib/$(PlatformTarget)/;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\SFML-3.0.0\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>sfml-graphics-d.lib;sfml-window-d.lib;sfml-system-d.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImportLibrary>$(SolutionDir)/lib/$(PlatformTarget)/$(TargetName).lib</ImportLibrary>
     </Link>
   </ItemDefinitionGroup>
@@ -159,7 +159,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>./include/;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\SFML-3.0.0\include;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\imgui-sfml-master;C:\Universidad\EngineUtilities\EngineUtilities\EngineUtilities\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./include/;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\imgui-master;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\imgui-sfml-master;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\SFML-3.0.0\include</AdditionalIncludeDirectories>
       <SupportJustMyCode>true</SupportJustMyCode>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -168,8 +168,8 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)lib/$(PlatformTarget)/;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\SFML-2.6.1\SFML-2.6.1\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>sfml-graphics-d.lib;sfml-window-d.lib;sfml-system-d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)lib/$(PlatformTarget)/;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\SFML-3.0.0\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>sfml-graphics-d.lib;sfml-window-d.lib;sfml-system-d.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImportLibrary>$(SolutionDir)/lib/$(PlatformTarget)/$(TargetName).lib</ImportLibrary>
     </Link>
   </ItemDefinitionGroup>
@@ -180,15 +180,15 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>./include/;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\SFML-3.0.0\include;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\imgui-sfml-master;C:\Universidad\EngineUtilities\EngineUtilities\EngineUtilities\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./include/;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\imgui-master;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\imgui-sfml-master;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\SFML-3.0.0\include</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <IntrinsicFunctions>true</IntrinsicFunctions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)lib/$(PlatformTarget)/;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\SFML-2.6.1\SFML-2.6.1\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>sfml-graphics-d.lib;sfml-window-d.lib;sfml-system-d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)lib/$(PlatformTarget)/;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\SFML-3.0.0\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>sfml-graphics-d.lib;sfml-window-d.lib;sfml-system-d.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImportLibrary>$(SolutionDir)/lib/$(PlatformTarget)/$(TargetName).lib</ImportLibrary>
     </Link>
   </ItemDefinitionGroup>
@@ -201,7 +201,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>./include/;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\SFML-3.0.0\include;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\imgui-sfml-master;C:\Universidad\EngineUtilities\EngineUtilities\EngineUtilities\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./include/;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\imgui-master;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\imgui-sfml-master;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\SFML-3.0.0\include</AdditionalIncludeDirectories>
       <SupportJustMyCode>true</SupportJustMyCode>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -210,8 +210,8 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)lib/$(PlatformTarget)/;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\SFML-2.6.1\SFML-2.6.1\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>sfml-graphics-d.lib;sfml-window-d.lib;sfml-system-d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)lib/$(PlatformTarget)/;C:\Universidad\ReaverEngine\ReaverEngine\ThirdParties\SFML-3.0.0\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>sfml-graphics-d.lib;sfml-window-d.lib;sfml-system-d.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImportLibrary>$(SolutionDir)/lib/$(PlatformTarget)/$(TargetName).lib</ImportLibrary>
     </Link>
   </ItemDefinitionGroup>

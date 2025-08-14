@@ -512,16 +512,6 @@ EngineGUI::setupGreyGUIStyle() {
 }
 
 /**
- * @brief Aplica un estilo gris inspirado en Unreal Engine 5 para ImGui.
- */
-void
-EngineGUI::setupGreyGUIStyle() {
-  ImGuiStyle& style = ImGui::GetStyle();
-  ImVec4* colors = style.Colors;
-  // ... [código de colores igual que en tu implementación] ...
-}
-
-/**
  * @brief Apaga y limpia los recursos de ImGui.
  */
 void
