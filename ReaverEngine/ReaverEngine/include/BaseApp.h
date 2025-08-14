@@ -37,6 +37,9 @@ private:
   // --- NPCs (A_Racer) render-top
   std::vector<EngineUtilities::TSharedPointer<A_Racer>> m_racers;
 
+  // Parrilla de salida (posiciones iniciales para Reset)
+  std::vector<sf::Vector2f> m_gridPositions;
+
   // --- Estado de carrera + cronómetro (sin meta/rectángulo)
   enum class RaceState { Ready, Countdown, Running, Finished };
   RaceState  m_state = RaceState::Ready;

@@ -60,8 +60,8 @@ bool BaseApp::init() {
   m_ACirlce->getComponent<Transform>()->setPosition(sf::Vector2f(21.f, 19.f));
   m_ACirlce->getComponent<Transform>()->setScale(sf::Vector2f(12.f, 18.f));
 
-  loadTextureOrLog("Sprites/Track");
-  m_ACirlce->setTexture(ResourceManager::getInstance().getTexture("Sprites/Track"));
+  resourceMan.loadTexture("Sprites/Track", "png");
+  m_ACirlce->setTexture(resourceMan.getTexture("Sprites/Track"));
   m_actors.push_back(m_ACirlce);
 
   // ---------------- Waypoint markers (encima de pista) ------------------------
@@ -72,14 +72,30 @@ bool BaseApp::init() {
     const char* name;          // "MP", "BP", "TP"
     const char* texKey;        // Sprites/<name>
     sf::Vector2f scale;        // escala del sprite
-    sf::Vector2f startOffset;  // separación inicial
+    float        lateral;       // offset lateral fijo (px)
+    float        wanderPx;      // amplitud wander (px)
+    float        wanderHz;      // frecuencia wander (Hz)
+    float        speedJitter;   // ± porcentaje (0.08 = ±8%)
   };
   std::vector<NpcCfg> cfgs;
-  cfgs.push_back({ "MP", "Sprites/MP", sf::Vector2f(1.5f, 1.5f), sf::Vector2f(0.f,   0.f) });
-  cfgs.push_back({ "BP", "Sprites/BP", sf::Vector2f(1.5f, 1.5f), sf::Vector2f(-18.f, -18.f) });
-  cfgs.push_back({ "TP", "Sprites/TP", sf::Vector2f(1.5f, 1.5f), sf::Vector2f(-18.f,  18.f) });
+  cfgs.push_back({ "MP", "Sprites/MP", sf::Vector2f(1.5f, 1.5f),  0.f,  8.f, 0.8f, 0.08f });
+  cfgs.push_back({ "BP", "Sprites/BP", sf::Vector2f(1.5f, 1.5f), +9.f, 10.f, 1.0f, 0.10f });
+  cfgs.push_back({ "TP", "Sprites/TP", sf::Vector2f(1.5f, 1.5f), -9.f,  7.f, 0.7f, 0.07f });
 
-  for (const auto& cfg : cfgs) {
+  // Parrilla de salida: usar el primer segmento del path
+  sf::Vector2f A = m_waypoints.front();
+  sf::Vector2f B = (m_waypoints.size() > 1 ? m_waypoints[1] : sf::Vector2f(A.x + 1.f, A.y));
+  sf::Vector2f T = B - A;
+  float tLen = std::sqrt(T.x * T.x + T.y * T.y);
+  if (tLen < 1e-4f) tLen = 1.f;
+  T = sf::Vector2f(T.x / tLen, T.y / tLen);        // tangente
+  const float slotGap = 42.f;                      // separación entre slots
+
+  m_gridPositions.clear();
+
+  for (size_t idx = 0; idx < cfgs.size(); ++idx) {
+    const auto& cfg = cfgs[idx];
+
     auto npc = EngineUtilities::MakeShared<A_Racer>(cfg.name);
     if (npc.isNull()) continue;
 
@@ -87,30 +103,35 @@ bool BaseApp::init() {
     npc->getComponent<CShape>()->createShape(RECTANGLE);
     npc->getComponent<CShape>()->setFillColor(sf::Color::White);
 
-    // Path + posición inicial
+    // Path
     npc->setPath(m_waypoints);
+
+    // Posición en parrilla: uno adelante y los otros detrás en “fila india”
+    sf::Vector2f startPos = A - T * (slotGap * float(idx));
+    m_gridPositions.push_back(startPos);
+
     if (auto xf = npc->getComponent<Transform>()) {
-      sf::Vector2f p = xf->getPosition(); // setPath ya pone path.front()
-      xf->setPosition(p + cfg.startOffset);
+      xf->setPosition(startPos);
       xf->setScale(cfg.scale);
     }
 
+    // Steering / variación
     npc->setMaxSpeed(240.f);
-    npc->setBehavior(A_Racer::Steering::PathFollow); // por defecto
+    npc->setBehavior(A_Racer::Steering::PathFollow);
+    npc->setLateralOffset(cfg.lateral);
+    npc->setJitter(cfg.wanderPx, cfg.wanderHz, cfg.speedJitter);
 
-    if (!ResourceManager::getInstance().loadTexture(cfg.texKey, "png")) {
-      ERROR("BaseApp", "texture", std::string("No pude cargar: ") + cfg.texKey + ".png");
-    }
-    else {
-      npc->setTexture(ResourceManager::getInstance().getTexture(cfg.texKey));
-    }
+    // Textura
+    resourceMan.loadTexture(cfg.texKey, "png");
+    npc->setTexture(resourceMan.getTexture(cfg.texKey));
 
     m_racers.push_back(npc);
     m_actors.push_back(npc);
   }
 
-  applyRaceConfigToRacers();   // solo total laps
-  resetRace(true);             // estado Ready, timer 0
+  // Config global de carrera + HUD
+  applyRaceConfigToRacers();
+  resetRace(true);   // Ready, timer 0, vuelve a parrilla
 
   return true;
 }
@@ -123,7 +144,7 @@ void BaseApp::update() {
 
   const float dt = m_windowPtr->deltaTime.asSeconds();
 
-  // Timers/estado
+  // Timers / estado de carrera
   updateRaceTimers(dt);
 
   // Solo movemos racers si la carrera está corriendo
@@ -133,6 +154,7 @@ void BaseApp::update() {
     }
   }
   else {
+    // Sin movimiento, pero sincroniza drawable (rotación, etc.)
     for (auto& actor : m_actors) {
       if (!actor.isNull()) actor->update(0.f);
     }
@@ -319,9 +341,16 @@ void BaseApp::resetRace(bool hardResetSprites) {
   m_raceTime = 0.f;
   m_countLeft = 0.f;
 
-  for (auto& r : m_racers) {
+  for (size_t i = 0; i < m_racers.size(); ++i) {
+    auto& r = m_racers[i];
     if (r.isNull()) continue;
     r->reset();
+    // Volver a la parrilla
+    if (i < m_gridPositions.size()) {
+      if (auto xf = r->getComponent<Transform>()) {
+        xf->setPosition(m_gridPositions[i]);
+      }
+    }
     if (hardResetSprites) r->update(0.f); // sync drawable
   }
 }

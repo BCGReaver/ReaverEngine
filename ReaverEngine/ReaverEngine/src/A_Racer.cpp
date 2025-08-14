@@ -10,6 +10,7 @@
 
 #include <cmath>
 #include <algorithm>
+#include <functional> // std::hash
 
 static inline float vlen(const sf::Vector2f& v) {
   return std::sqrt(v.x * v.x + v.y * v.y);
@@ -22,6 +23,10 @@ static inline float clamp01(float x) { return std::max(0.f, std::min(1.f, x)); }
 
 A_Racer::A_Racer(const std::string& name, int /*playerId*/)
   : Actor(name) {
+  // Fases únicas por nombre para que no “oscilen igual”
+  std::size_t h = std::hash<std::string>{}(name);
+  m_phase1 = float((h & 0xFFFF)) / 65535.f;  // 0..1
+  m_phase2 = float((h & 0xFFFF0000) >> 16) / 65535.f;
 }
 
 void A_Racer::setPath(const std::vector<sf::Vector2f>& pathPoints) {
@@ -52,6 +57,7 @@ void A_Racer::reset() {
   }
   currentWaypointIndex = (path.size() > 1 ? 1 : 0);
   m_lastIndex = currentWaypointIndex;
+  m_noiseT = 0.f;
 
   Actor::update(0.f);
 }
@@ -78,12 +84,12 @@ float A_Racer::getProgress() const {
 }
 
 void A_Racer::update(float dt) {
-  if (isFinished()) {
-    Actor::update(dt);
-    return;
-  }
+  if (isFinished()) { Actor::update(dt); return; }
 
   const int prevIndex = currentWaypointIndex;
+
+  // Avanza tiempo de ruido
+  if (m_wanderFreq > 0.f) m_noiseT += dt * m_wanderFreq;
 
   // Comportamiento actual
   if (path.size() >= 2) {
@@ -95,9 +101,7 @@ void A_Racer::update(float dt) {
   }
 
   // Vuelta cuando el índice hace wrap (e.g., pasa de 41 -> 0)
-  if (currentWaypointIndex < prevIndex) {
-    ++m_currentLap;
-  }
+  if (currentWaypointIndex < prevIndex) ++m_currentLap;
   m_lastIndex = currentWaypointIndex;
 
   Actor::update(dt);
@@ -118,6 +122,10 @@ void A_Racer::doPathFollowing(float dt) {
   if (abLen2 < 1e-6f) { currentWaypointIndex = (i + 1) % N; return; }
   float abLen = std::sqrt(abLen2);
 
+  // Tangente y normal (izquierda)
+  sf::Vector2f T = sf::Vector2f(AB.x / abLen, AB.y / abLen);
+  sf::Vector2f Nrm(-T.y, T.x);
+
   sf::Vector2f AP = pos - A;
   float t = (AP.x * AB.x + AP.y * AB.y) / abLen2;
 
@@ -131,21 +139,41 @@ void A_Racer::doPathFollowing(float dt) {
     abLen2 = AB.x * AB.x + AB.y * AB.y;
     abLen = std::sqrt(abLen2);
     if (abLen2 < 1e-6f) return;
+    T = sf::Vector2f(AB.x / abLen, AB.y / abLen);
+    Nrm = sf::Vector2f(-T.y, T.x);
     AP = pos - A;
     t = (AP.x * AB.x + AP.y * AB.y) / abLen2;
   }
 
+  // Punto de persecución
   float s = std::clamp(t + (lookaheadDistance / std::max(abLen, 1e-3f)), 0.f, 1.f);
   sf::Vector2f pursue = A + AB * s;
 
+  // Variaciones: offset lateral fijo + wander senoidal + pequeño jitter de velocidad
+  pursue += Nrm * m_lateralOffset;
+  if (m_wanderStrength > 0.f) {
+    const float twoPi = 6.2831853f;
+    float wiggle = std::sin((m_noiseT + m_phase1) * twoPi) * m_wanderStrength;
+    pursue += Nrm * wiggle;
+  }
+
+  // Dirigirse hacia pursue
   sf::Vector2f to = pursue - pos;
   float d = std::hypot(to.x, to.y);
   if (d > 1e-4f) {
     sf::Vector2f dir = sf::Vector2f(to.x / d, to.y / d);
-    float brakeRadius = lookaheadDistance * 1.2f;
-    float speed = (d < brakeRadius) ? (m_maxSpeed * (d / brakeRadius)) : m_maxSpeed;
 
-    pos += dir * speed * dt;
+    float brakeRadius = lookaheadDistance * 1.2f;
+    float baseSpeed = (d < brakeRadius) ? (m_maxSpeed * (d / brakeRadius)) : m_maxSpeed;
+
+    // Jitter de velocidad (±)
+    if (m_speedJitter > 0.f) {
+      const float twoPi = 6.2831853f;
+      float jitterMul = 1.f + m_speedJitter * std::sin((m_noiseT + m_phase2) * twoPi * 0.7f);
+      baseSpeed *= std::max(0.6f, jitterMul); // evita caer demasiado
+    }
+
+    pos += dir * baseSpeed * dt;
 
     float angleDeg = std::atan2(dir.y, dir.x) * 180.f / 3.14159265f;
     xf->setRotation(angleDeg);
