@@ -34,16 +34,20 @@ private:
   size_t m_currentWaypointIndex = 0;
   bool   m_showWaypointMarkers = true;
 
-  // --- NPCs (A_Racer) render-top
+  // Editor de waypoints (HUD)
+  int  m_wpEditIndex = 0;
+  bool m_wpEditorOpen = true;
+
+  // --- NPCs
   std::vector<EngineUtilities::TSharedPointer<A_Racer>> m_racers;
 
-  // Parrilla de salida (posiciones iniciales para Reset)
+  // --- Parrilla de salida (posiciones para Reset/Countdown)
   std::vector<sf::Vector2f> m_gridPositions;
 
-  // --- Estado de carrera + cronómetro (sin meta/rectángulo)
+  // --- Estado de carrera + cronómetro
   enum class RaceState { Ready, Countdown, Running, Finished };
   RaceState  m_state = RaceState::Ready;
-  float      m_countdown = 3.0f;      // 3..2..1..Go!
+  float      m_countdown = 3.0f;
   float      m_countLeft = 0.0f;
   sf::Clock  m_clock;
   float      m_raceTime = 0.0f;
@@ -51,15 +55,19 @@ private:
 
   // --- Helpers
   bool loadWaypointsCSV(const std::string& path);
+  bool saveWaypointsCSV(const std::string& path);
   void initWaypoints_DefaultTrack();
   void buildWaypointMarkers();
+  void refreshMarkersFromWaypoints();   // mueve marcadores existentes
+  void rebuildRacersPath();             // aplica m_waypoints a todos los NPCs
   bool loadTextureOrLog(const std::string& keyNoExt);
 
   // HUD / lógica carrera
   void drawHUD();
+  void drawWaypointEditor();            // panel de edición
   void resetRace(bool hardResetSprites);
   void startCountdown();
   void updateRaceTimers(float dt);
-  void applyRaceConfigToRacers();      // solo total laps
+  void applyRaceConfigToRacers();
   void computeAndShowRanking();
 };

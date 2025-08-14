@@ -35,28 +35,26 @@ bool BaseApp::init() {
 
   m_windowPtr = EngineUtilities::MakeShared<Window>(1920, 1080, "Reaver Engine");
   if (!m_windowPtr) {
-    ERROR("BaseApp", "init", "Failed to create window pointer, check memory allocation");
+    ERROR("BaseApp", "init", "Failed to create Window");
     return false;
   }
 
   // ImGui
   m_engineGUI.init(m_windowPtr);
 
-  // ---------------- Waypoints (cargar ANTES que NPCs) -------------------------
+  // --- Waypoints (cargar ANTES que NPCs)
   if (!loadWaypointsCSV("assets/tracks/oval.waypoints.csv")) {
     initWaypoints_DefaultTrack();
   }
 
-  // ---------------- Actor "pista" ---------------------------------------------
+  // --- Actor pista
   m_ACirlce = EngineUtilities::MakeShared<Actor>("Track");
   if (!m_ACirlce) {
-    ERROR("BaseApp", "init", "Failed to create Actor, check memory allocation");
+    ERROR("BaseApp", "init", "Failed to create Track actor");
     return false;
   }
   m_ACirlce->getComponent<CShape>()->createShape(RECTANGLE);
   m_ACirlce->getComponent<CShape>()->setFillColor(sf::Color::White);
-
-  // Ajusta a tu textura real (posición/escala)
   m_ACirlce->getComponent<Transform>()->setPosition(sf::Vector2f(21.f, 19.f));
   m_ACirlce->getComponent<Transform>()->setScale(sf::Vector2f(12.f, 18.f));
 
@@ -64,32 +62,33 @@ bool BaseApp::init() {
   m_ACirlce->setTexture(resourceMan.getTexture("Sprites/Track"));
   m_actors.push_back(m_ACirlce);
 
-  // ---------------- Waypoint markers (encima de pista) ------------------------
+  // --- Marcadores de WPs
   buildWaypointMarkers();
 
-  // ---------------- NPCs (Track-like + textura) -------------------------------
+  // --- NPCs (visual igual que pista) + variación y parrilla
   struct NpcCfg {
-    const char* name;          // "MP", "BP", "TP"
-    const char* texKey;        // Sprites/<name>
-    sf::Vector2f scale;        // escala del sprite
-    float        lateral;       // offset lateral fijo (px)
-    float        wanderPx;      // amplitud wander (px)
-    float        wanderHz;      // frecuencia wander (Hz)
-    float        speedJitter;   // ± porcentaje (0.08 = ±8%)
+    const char* name;
+    const char* texKey;
+    sf::Vector2f scale;
+    float lateral;
+    float wanderPx;
+    float wanderHz;
+    float speedJitter;
   };
-  std::vector<NpcCfg> cfgs;
-  cfgs.push_back({ "MP", "Sprites/MP", sf::Vector2f(1.5f, 1.5f),  0.f,  8.f, 0.8f, 0.08f });
-  cfgs.push_back({ "BP", "Sprites/BP", sf::Vector2f(1.5f, 1.5f), +9.f, 10.f, 1.0f, 0.10f });
-  cfgs.push_back({ "TP", "Sprites/TP", sf::Vector2f(1.5f, 1.5f), -9.f,  7.f, 0.7f, 0.07f });
+  std::vector<NpcCfg> cfgs{
+    { "MP", "Sprites/MP", {1.5f,1.5f},  0.f,  8.f, 0.8f, 0.08f },
+    { "BP", "Sprites/BP", {1.5f,1.5f}, +9.f, 10.f, 1.0f, 0.10f },
+    { "TP", "Sprites/TP", {1.5f,1.5f}, -9.f,  7.f, 0.7f, 0.07f }
+  };
 
-  // Parrilla de salida: usar el primer segmento del path
+  // Parrilla (fila india) sobre el primer segmento del path
   sf::Vector2f A = m_waypoints.front();
   sf::Vector2f B = (m_waypoints.size() > 1 ? m_waypoints[1] : sf::Vector2f(A.x + 1.f, A.y));
   sf::Vector2f T = B - A;
   float tLen = std::sqrt(T.x * T.x + T.y * T.y);
   if (tLen < 1e-4f) tLen = 1.f;
-  T = sf::Vector2f(T.x / tLen, T.y / tLen);        // tangente
-  const float slotGap = 42.f;                      // separación entre slots
+  T = sf::Vector2f(T.x / tLen, T.y / tLen);
+  const float slotGap = 42.f;
 
   m_gridPositions.clear();
 
@@ -99,14 +98,12 @@ bool BaseApp::init() {
     auto npc = EngineUtilities::MakeShared<A_Racer>(cfg.name);
     if (npc.isNull()) continue;
 
-    // Visual igual que la pista
     npc->getComponent<CShape>()->createShape(RECTANGLE);
     npc->getComponent<CShape>()->setFillColor(sf::Color::White);
 
-    // Path
     npc->setPath(m_waypoints);
 
-    // Posición en parrilla: uno adelante y los otros detrás en “fila india”
+    // Guardamos la posición de parrilla para Reset/Countdown
     sf::Vector2f startPos = A - T * (slotGap * float(idx));
     m_gridPositions.push_back(startPos);
 
@@ -115,13 +112,11 @@ bool BaseApp::init() {
       xf->setScale(cfg.scale);
     }
 
-    // Steering / variación
     npc->setMaxSpeed(240.f);
     npc->setBehavior(A_Racer::Steering::PathFollow);
     npc->setLateralOffset(cfg.lateral);
     npc->setJitter(cfg.wanderPx, cfg.wanderHz, cfg.speedJitter);
 
-    // Textura
     resourceMan.loadTexture(cfg.texKey, "png");
     npc->setTexture(resourceMan.getTexture(cfg.texKey));
 
@@ -129,10 +124,8 @@ bool BaseApp::init() {
     m_actors.push_back(npc);
   }
 
-  // Config global de carrera + HUD
   applyRaceConfigToRacers();
-  resetRace(true);   // Ready, timer 0, vuelve a parrilla
-
+  resetRace(true);   // Ready + a parrilla
   return true;
 }
 
@@ -141,26 +134,17 @@ bool BaseApp::init() {
 //------------------------------------------------------------------------------
 void BaseApp::update() {
   if (!m_windowPtr.isNull()) m_windowPtr->update();
-
   const float dt = m_windowPtr->deltaTime.asSeconds();
 
-  // Timers / estado de carrera
   updateRaceTimers(dt);
 
-  // Solo movemos racers si la carrera está corriendo
   if (m_state == RaceState::Running) {
-    for (auto& actor : m_actors) {
-      if (!actor.isNull()) actor->update(dt);
-    }
+    for (auto& a : m_actors) if (!a.isNull()) a->update(dt);
   }
   else {
-    // Sin movimiento, pero sincroniza drawable (rotación, etc.)
-    for (auto& actor : m_actors) {
-      if (!actor.isNull()) actor->update(0.f);
-    }
+    for (auto& a : m_actors) if (!a.isNull()) a->update(0.f);
   }
 
-  // GUI
   m_engineGUI.update(m_windowPtr, m_windowPtr->deltaTime);
   m_engineGUI.outliner(m_actors);
   m_engineGUI.inspector(m_actors);
@@ -168,28 +152,25 @@ void BaseApp::update() {
 }
 
 //------------------------------------------------------------------------------
-// Render (pista -> waypoints -> NPCs)
+// Render
 //------------------------------------------------------------------------------
 void BaseApp::render() {
   if (!m_windowPtr) return;
   m_windowPtr->clear();
 
-  // 1) pista
   if (!m_ACirlce.isNull()) {
-    if (auto shape = m_ACirlce->getComponent<CShape>()) shape->render(m_windowPtr);
+    if (auto s = m_ACirlce->getComponent<CShape>()) s->render(m_windowPtr);
     else m_ACirlce->render(m_windowPtr);
   }
-  // 2) waypoints
-  for (auto& marker : m_waypointMarkers) {
-    if (marker.isNull()) continue;
-    if (auto shape = marker->getComponent<CShape>()) shape->render(m_windowPtr);
-    else marker->render(m_windowPtr);
+  for (auto& m : m_waypointMarkers) {
+    if (m.isNull()) continue;
+    if (auto s = m->getComponent<CShape>()) s->render(m_windowPtr);
+    else m->render(m_windowPtr);
   }
-  // 3) NPCs
-  for (auto& npc : m_racers) {
-    if (npc.isNull()) continue;
-    if (auto shape = npc->getComponent<CShape>()) shape->render(m_windowPtr);
-    else npc->render(m_windowPtr);
+  for (auto& n : m_racers) {
+    if (n.isNull()) continue;
+    if (auto s = n->getComponent<CShape>()) s->render(m_windowPtr);
+    else n->render(m_windowPtr);
   }
 
   m_windowPtr->render();
@@ -204,47 +185,42 @@ void BaseApp::destroy() {
   m_engineGUI.destroy();
 }
 
-// ==============================================================================
-// =====================  WAYPOINTS: CSV / DEFAULT / MARKERS  ===================
-// ==============================================================================
+// ============================================================================
+// Waypoints load/save
+// ============================================================================
 bool BaseApp::loadWaypointsCSV(const std::string& path) {
   std::ifstream in(path);
   if (!in.is_open()) {
     MESSAGE("BaseApp", "Waypoints", "CSV not found: " + path);
     return false;
   }
-
   std::vector<sf::Vector2f> parsed;
   std::string line;
   while (std::getline(in, line)) {
     if (line.empty() || line[0] == '#') continue;
-
     std::istringstream ss(line);
     std::string sx, sy;
     if (std::getline(ss, sx, ',') && std::getline(ss, sy, ',')) {
-      try {
-        float x = std::stof(sx);
-        float y = std::stof(sy);
-        parsed.push_back(sf::Vector2f(x, y));
-      }
-      catch (...) {
-        MESSAGE("BaseApp", "Waypoints", "Invalid line in CSV: " + line);
-      }
+      try { parsed.emplace_back(std::stof(sx), std::stof(sy)); }
+      catch (...) { MESSAGE("BaseApp", "Waypoints", "Invalid line: " + line); }
     }
   }
-
-  if (parsed.empty()) {
-    MESSAGE("BaseApp", "Waypoints", "CSV loaded but no valid rows");
-    return false;
-  }
-
-  m_waypoints = parsed;
+  if (parsed.empty()) return false;
+  m_waypoints = std::move(parsed);
   m_currentWaypointIndex = 0;
-  MESSAGE("BaseApp", "Waypoints", "Loaded " + std::to_string(m_waypoints.size()) + " points from CSV");
+  return true;
+}
+
+bool BaseApp::saveWaypointsCSV(const std::string& path) {
+  std::ofstream out(path, std::ios::trunc);
+  if (!out.is_open()) return false;
+  out << "# x,y\n";
+  for (auto& p : m_waypoints) out << p.x << "," << p.y << "\n";
   return true;
 }
 
 void BaseApp::initWaypoints_DefaultTrack() {
+  // (mismos puntos de antes; ajusta aquí si quieres hardcodear uno nuevo)
   m_waypoints.clear();
   m_waypoints.push_back(sf::Vector2f(32.f, 483.f));
   m_waypoints.push_back(sf::Vector2f(30.f, 214.f));
@@ -316,24 +292,48 @@ void BaseApp::buildWaypointMarkers() {
   }
 }
 
-// ==============================================================================
-// ============================  Helpers varios  ================================
-// ==============================================================================
+void BaseApp::refreshMarkersFromWaypoints() {
+  // Asume mismo tamaño. Si cambia el número, vuelve a buildWaypointMarkers().
+  if (m_waypointMarkers.size() != m_waypoints.size()) {
+    // elimina marcadores viejos de m_actors
+    for (auto& mk : m_waypointMarkers) {
+      auto it = std::find(m_actors.begin(), m_actors.end(), mk);
+      if (it != m_actors.end()) m_actors.erase(it);
+    }
+    buildWaypointMarkers();
+    return;
+  }
+  for (size_t i = 0; i < m_waypointMarkers.size(); ++i) {
+    if (m_waypointMarkers[i].isNull()) continue;
+    m_waypointMarkers[i]->getComponent<Transform>()->setPosition(m_waypoints[i]);
+  }
+}
+
+void BaseApp::rebuildRacersPath() {
+  for (auto& r : m_racers) {
+    if (r.isNull()) continue;
+    r->setPath(m_waypoints); // también resetea su posición al primer WP
+  }
+  // Vuelve a parrilla (opcional); si no quieres, comenta:
+  for (size_t i = 0; i < m_racers.size() && i < m_gridPositions.size(); ++i) {
+    if (auto xf = m_racers[i]->getComponent<Transform>()) xf->setPosition(m_gridPositions[i]);
+  }
+}
+
+// ============================================================================
+// Helpers HUD / carrera
+// ============================================================================
 bool BaseApp::loadTextureOrLog(const std::string& keyNoExt) {
-  ResourceManager& resourceMan = ResourceManager::getInstance();
-  bool ok = resourceMan.loadTexture(keyNoExt, "png");
-  if (!ok) {
-    ERROR("BaseApp", "texture", std::string("No pude cargar: ") + keyNoExt + ".png (revisa Working Directory y ruta)");
+  ResourceManager& rm = ResourceManager::getInstance();
+  if (!rm.loadTexture(keyNoExt, "png")) {
+    ERROR("BaseApp", "texture", std::string("No pude cargar: ") + keyNoExt + ".png");
     return false;
   }
   return true;
 }
 
 void BaseApp::applyRaceConfigToRacers() {
-  for (auto& r : m_racers) {
-    if (r.isNull()) continue;
-    r->setTotalLaps(m_totalLaps);
-  }
+  for (auto& r : m_racers) if (!r.isNull()) r->setTotalLaps(m_totalLaps);
 }
 
 void BaseApp::resetRace(bool hardResetSprites) {
@@ -345,13 +345,13 @@ void BaseApp::resetRace(bool hardResetSprites) {
     auto& r = m_racers[i];
     if (r.isNull()) continue;
     r->reset();
-    // Volver a la parrilla
+    // volver a parrilla
     if (i < m_gridPositions.size()) {
       if (auto xf = r->getComponent<Transform>()) {
         xf->setPosition(m_gridPositions[i]);
       }
     }
-    if (hardResetSprites) r->update(0.f); // sync drawable
+    if (hardResetSprites) r->update(0.f);
   }
 }
 
@@ -373,7 +373,6 @@ void BaseApp::updateRaceTimers(float dt) {
   else if (m_state == RaceState::Running) {
     m_raceTime += dt;
 
-    // ¿Todos terminaron?
     bool allFinished = true;
     for (auto& r : m_racers) {
       if (r.isNull()) continue;
@@ -388,33 +387,82 @@ void BaseApp::computeAndShowRanking() {
   std::vector<Entry> list;
   for (auto& r : m_racers) {
     if (r.isNull()) continue;
-    float sc = r->getCurrentLap() + r->getProgress(); // lap + progreso 0..1
+    float sc = r->getCurrentLap() + r->getProgress();
     list.push_back({ r, sc });
   }
-  std::sort(list.begin(), list.end(), [](const Entry& a, const Entry& b) {
-    return a.score > b.score;
-    });
+  std::sort(list.begin(), list.end(),
+    [](const Entry& a, const Entry& b) { return a.score > b.score; });
 
   int pos = 1;
   for (auto& e : list) {
     ImGui::BulletText("#%d  %s  L:%d/%d  prog:%.2f",
-      pos++,
-      e.r->getName().c_str(),
-      e.r->getCurrentLap(),
-      m_totalLaps,
-      e.r->getProgress());
+      pos++, e.r->getName().c_str(),
+      e.r->getCurrentLap(), m_totalLaps, e.r->getProgress());
+  }
+}
+
+// ---------------------------------------------------------------------------
+// HUD principal + Editor de Waypoints
+// ---------------------------------------------------------------------------
+void BaseApp::drawWaypointEditor() {
+  if (!m_wpEditorOpen || m_waypoints.empty()) return;
+
+  if (ImGui::CollapsingHeader("Waypoints (editor)")) {
+    ImGui::Text("Total: %d", (int)m_waypoints.size());
+    if (m_wpEditIndex < 0) m_wpEditIndex = 0;
+    if (m_wpEditIndex >= (int)m_waypoints.size()) m_wpEditIndex = (int)m_waypoints.size() - 1;
+
+    ImGui::SliderInt("Selected", &m_wpEditIndex, 0, (int)m_waypoints.size() - 1);
+    sf::Vector2f& p = m_waypoints[(size_t)m_wpEditIndex];
+    float xy[2] = { p.x, p.y };
+    if (ImGui::DragFloat2("Position (x,y)", xy, 0.5f)) {
+      p.x = xy[0]; p.y = xy[1];
+      refreshMarkersFromWaypoints();
+      rebuildRacersPath();
+    }
+
+    // Nudge rápido
+    if (ImGui::Button("X -5")) { p.x -= 5; refreshMarkersFromWaypoints(); rebuildRacersPath(); }
+    ImGui::SameLine();
+    if (ImGui::Button("X -1")) { p.x -= 1; refreshMarkersFromWaypoints(); rebuildRacersPath(); }
+    ImGui::SameLine();
+    if (ImGui::Button("X +1")) { p.x += 1; refreshMarkersFromWaypoints(); rebuildRacersPath(); }
+    ImGui::SameLine();
+    if (ImGui::Button("X +5")) { p.x += 5; refreshMarkersFromWaypoints(); rebuildRacersPath(); }
+
+    if (ImGui::Button("Y -5")) { p.y -= 5; refreshMarkersFromWaypoints(); rebuildRacersPath(); }
+    ImGui::SameLine();
+    if (ImGui::Button("Y -1")) { p.y -= 1; refreshMarkersFromWaypoints(); rebuildRacersPath(); }
+    ImGui::SameLine();
+    if (ImGui::Button("Y +1")) { p.y += 1; refreshMarkersFromWaypoints(); rebuildRacersPath(); }
+    ImGui::SameLine();
+    if (ImGui::Button("Y +5")) { p.y += 5; refreshMarkersFromWaypoints(); rebuildRacersPath(); }
+
+    ImGui::Separator();
+    if (ImGui::Button("Save CSV")) {
+      if (saveWaypointsCSV("assets/tracks/oval.waypoints.csv")) {
+        MESSAGE("BaseApp", "Waypoints", "Saved to assets/tracks/oval.waypoints.csv");
+      }
+      else {
+        ERROR("BaseApp", "Waypoints", "Failed to save CSV");
+      }
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Rebuild markers")) {
+      buildWaypointMarkers();
+      rebuildRacersPath();
+    }
+    ImGui::TextDisabled("Tip: ajusta con DragFloat o 'nudge' y presiona Save.");
   }
 }
 
 void BaseApp::drawHUD() {
   ImGui::SetNextWindowBgAlpha(0.35f);
   if (ImGui::Begin("HUD Carrera", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-    // Controles de carrera
     ImGui::Text("Estado: %s",
       (m_state == RaceState::Ready ? "Ready" :
         m_state == RaceState::Countdown ? "Countdown" :
-        m_state == RaceState::Running ? "Running" :
-        "Finished"));
+        m_state == RaceState::Running ? "Running" : "Finished"));
     if (m_state == RaceState::Countdown) {
       ImGui::Text("Comienza en: %.1f", m_countLeft);
     }
@@ -426,31 +474,30 @@ void BaseApp::drawHUD() {
     ImGui::SameLine();
     if (ImGui::Button("Reset")) { resetRace(true); }
 
-    // Laps configurables
     ImGui::Separator();
-    if (ImGui::SliderInt("Laps", &m_totalLaps, 1, 10)) {
-      applyRaceConfigToRacers();
-    }
+    if (ImGui::SliderInt("Laps", &m_totalLaps, 1, 10)) applyRaceConfigToRacers();
 
-    // Comportamientos por corredor
     ImGui::Separator();
     for (auto& r : m_racers) {
       if (r.isNull()) continue;
       int mode = (int)r->getBehavior();
       ImGui::Text("%s", r->getName().c_str());
       ImGui::SameLine();
-      if (ImGui::RadioButton("PathFollow", mode == 0)) { mode = 0; }
+      if (ImGui::RadioButton("PathFollow", mode == 0)) mode = 0;
       ImGui::SameLine();
-      if (ImGui::RadioButton("Seek", mode == 1)) { mode = 1; }
+      if (ImGui::RadioButton("Seek", mode == 1)) mode = 1;
       ImGui::SameLine();
-      if (ImGui::RadioButton("Arrive", mode == 2)) { mode = 2; }
+      if (ImGui::RadioButton("Arrive", mode == 2)) mode = 2;
       r->setBehavior((A_Racer::Steering)mode);
     }
 
-    // Ranking
     ImGui::Separator();
     ImGui::TextUnformatted("Ranking:");
     computeAndShowRanking();
+
+    // Editor de WPs
+    ImGui::Separator();
+    drawWaypointEditor();
   }
   ImGui::End();
 }
